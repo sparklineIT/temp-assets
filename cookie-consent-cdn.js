@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════╗
- * ║   HASHBYT.COM — Cookie Consent  (External CDN Module)  ║
+ * ║   HASHBYT.COM — Cookie Consent  (External CDN Module) new  ║
  * ║   Library : orestbida/cookieconsent v3.0.1             ║
  * ║   Architecture: GTM-only (consent signals only)        ║
  * ║   All tags (GA4, PostHog, Ads, LinkedIn) live in GTM   ║
@@ -173,9 +173,9 @@ CookieConsent.run({
               cookieTable: {
                 headers: { name: 'Cookie', domain: 'Domain', desc: 'Description' },
                 body: [
-                  { name: '_ga, _ga_*', domain: 'google.com',  desc: 'Google Analytics 4 — measures page views and interactions' },
-                  { name: '_gid',       domain: 'google.com',  desc: 'Google Analytics — distinguishes users within 24 h' },
-                  { name: 'ph_*',       domain: 'posthog.com', desc: 'PostHog — product analytics and session recording' },
+                  { name: '_ga, _ga_*', domain: 'google.com',   desc: 'Google Analytics 4 — measures page views and interactions' },
+                  { name: '_gid',       domain: 'google.com',   desc: 'Google Analytics — distinguishes users within 24 h' },
+                  { name: 'ph_*',       domain: 'hashbyt.com',  desc: 'PostHog — product analytics and session recording' },
                 ],
               },
             },
