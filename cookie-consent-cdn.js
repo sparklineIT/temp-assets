@@ -2,21 +2,16 @@
  * ╔══════════════════════════════════════════════════════════╗
  * ║   HASHBYT.COM — Cookie Consent  (External CDN Module)  ║
  * ║   Library : orestbida/cookieconsent v3.0.1             ║
- * ║   Tracks  : GA4 · PostHog · Google Ads · LinkedIn      ║
+ * ║   Architecture: GTM-only (consent signals only)        ║
+ * ║   All tags (GA4, PostHog, Ads, LinkedIn) live in GTM   ║
  * ╚══════════════════════════════════════════════════════════╝
  *
- * HOST THIS FILE on GitHub Pages, Cloudflare Pages, or any CDN.
+ * This file ONLY manages the consent banner UI and fires
+ * gtag('consent', 'update', ...) signals to GTM.
+ * GTM handles loading every tracking tag based on those signals.
  *
- * Then in Framer → Site Settings → Custom Code → <head>:
- *
- *   <script type="module" src="https://YOUR_CDN_URL/cookie-consent-cdn.js"></script>
- *
- * BEFORE HOSTING: replace every ← REPLACE placeholder below.
- *
- * Bug fixes vs original cookie-consent-v3.html:
- *   ① ph_ cookie match is now a regex (/^ph_/) not a plain string
- *   ② gtag.js is loaded once via ensureGtag() — no duplicate script tags
- *   ③ LinkedIn opt-out added to onChange when marketing consent is revoked
+ * HOST on GitHub → served via jsDelivr:
+ *   https://cdn.jsdelivr.net/gh/sparklineIT/temp-assets@main/cookie-consent-cdn.js
  */
 
 // ── Inject library CSS ──────────────────────────────────────────────────────
@@ -30,80 +25,41 @@
 // ── Load the UMD bundle (sets window.CookieConsent) ────────────────────────
 import 'https://cdn.jsdelivr.net/gh/orestbida/cookieconsent@3.0.1/dist/cookieconsent.umd.js';
 
-// ── IDs — replace before hosting ───────────────────────────────────────────
-const GA4_ID  = 'G-XXXXXXXXXX';            // ← REPLACE: GA4 Measurement ID
-const GADS_ID = 'AW-XXXXXXXXX';            // ← REPLACE: Google Ads Conversion ID
-const LI_ID   = 'XXXXXXXXXX';              // ← REPLACE: LinkedIn Partner ID
-const PH_KEY  = 'YOUR_POSTHOG_KEY';        // ← REPLACE: PostHog Project API Key
-const PH_HOST = 'https://app.posthog.com'; // keep, or change to self-hosted URL
+// ── GTM consent signal helpers ──────────────────────────────────────────────
+// GTM is already on the page (loaded via Framer custom code).
+// These functions just update the consent state — GTM fires or blocks
+// tags automatically based on these signals.
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
-function addScript(src, attrs = {}) {
-  const s = document.createElement('script');
-  s.src   = src;
-  s.async = true;
-  Object.entries(attrs).forEach(([k, v]) => s.setAttribute(k, v));
-  document.head.appendChild(s);
-}
-
-/**
- * BUG FIX ②: load gtag.js exactly once.
- * Analytics + marketing destinations are both registered via gtag('config', …)
- * on the same shared script — no second <script> tag needed.
- */
-function ensureGtag(fallbackId) {
-  if (window._gtagLoaded) return;
-  window._gtagLoaded = true;
+function grantAnalytics() {
   window.dataLayer = window.dataLayer || [];
-  window.gtag = function () { window.dataLayer.push(arguments); };
-  window.gtag('js', new Date());
-  addScript('https://www.googletagmanager.com/gtag/js?id=' + fallbackId);
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  window.gtag('consent', 'update', { analytics_storage: 'granted' });
 }
 
-// ── Analytics: GA4 + PostHog ────────────────────────────────────────────────
-function initAnalytics() {
-  if (window._ga4Init) return;
-  window._ga4Init = true;
-
-  // BUG FIX ②: share the single gtag.js with marketing
-  ensureGtag(GA4_ID);
-  window.gtag('config', GA4_ID, { anonymize_ip: true });
-
-  if (!window._posthogLoaded) {
-    window._posthogLoaded = true;
-    // PostHog snippet (minified)
-    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]);t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.async=!0,p.src=s.api_host+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+" (stub)"},o="capture identify alias people.set people.set_once set_config register register_once unregister opt_out_capturing has_opted_out_capturing opt_in_capturing reset isFeatureEnabled onFeatureFlags getFeatureFlag getFeatureFlagPayload reloadFeatureFlags group updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures getActiveMatchingSurveys getSurveys getNextSurveyStep onSessionId setPersonPropertiesForFlags".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
-    posthog.init(PH_KEY, { api_host: PH_HOST, autocapture: true });
-  }
+function revokeAnalytics() {
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  window.gtag('consent', 'update', { analytics_storage: 'denied' });
 }
 
-// ── Marketing: Google Ads + LinkedIn ────────────────────────────────────────
-function initMarketing() {
-  if (window._mktInit) return;
-  window._mktInit = true;
+function grantMarketing() {
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  window.gtag('consent', 'update', {
+    ad_storage:         'granted',
+    ad_user_data:       'granted',
+    ad_personalization: 'granted',
+  });
+}
 
-  // BUG FIX ②: reuse the existing gtag.js load, just add Ads config
-  ensureGtag(GADS_ID);
-  window.gtag('config', GADS_ID);
-
-  if (!window._liLoaded) {
-    window._liLoaded = true;
-    window._linkedin_partner_id       = LI_ID;
-    window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
-    window._linkedin_data_partner_ids.push(LI_ID);
-    (function (l) {
-      if (!l) {
-        window.lintrk = function (a, b) { window.lintrk.q.push([a, b]); };
-        window.lintrk.q = [];
-      }
-      const s   = document.createElement('script');
-      s.type    = 'text/javascript';
-      s.async   = true;
-      s.src     = 'https://snap.licdn.com/li.lms-analytics/insight.min.js';
-      const ref = document.getElementsByTagName('script')[0];
-      ref.parentNode.insertBefore(s, ref);
-    })(window.lintrk);
-  }
+function revokeMarketing() {
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+  window.gtag('consent', 'update', {
+    ad_storage:         'denied',
+    ad_user_data:       'denied',
+    ad_personalization: 'denied',
+  });
 }
 
 // ── Cookie Consent config ────────────────────────────────────────────────────
@@ -111,38 +67,25 @@ CookieConsent.run({
   cookie: { name: 'cc_cookie', expiresAfterDays: 365 },
   mode: 'opt-in',
 
+  // Fires on FIRST visit (user just made a choice)
   onFirstConsent: ({ cookie }) => {
-    if (cookie.categories.includes('analytics')) initAnalytics();
-    if (cookie.categories.includes('marketing')) initMarketing();
+    if (cookie.categories.includes('analytics')) grantAnalytics();
+    if (cookie.categories.includes('marketing')) grantMarketing();
   },
 
+  // Fires on RETURN visits (reads stored consent and restores signals)
   onConsent: ({ cookie }) => {
-    if (cookie.categories.includes('analytics')) initAnalytics();
-    if (cookie.categories.includes('marketing')) initMarketing();
+    if (cookie.categories.includes('analytics')) grantAnalytics();
+    if (cookie.categories.includes('marketing')) grantMarketing();
   },
 
-  onChange: ({ cookie, changedCategories }) => {
+  // Fires when user CHANGES preferences via the modal
+  onChange: ({ changedCategories }) => {
     if (changedCategories.includes('analytics')) {
-      if (CookieConsent.acceptedCategory('analytics')) {
-        initAnalytics();
-      } else {
-        if (window.gtag)    window.gtag('consent', 'update', { analytics_storage: 'denied' });
-        if (window.posthog) window.posthog.opt_out_capturing();
-      }
+      CookieConsent.acceptedCategory('analytics') ? grantAnalytics() : revokeAnalytics();
     }
-
     if (changedCategories.includes('marketing')) {
-      if (CookieConsent.acceptedCategory('marketing')) {
-        initMarketing();
-      } else {
-        if (window.gtag) window.gtag('consent', 'update', {
-          ad_storage:         'denied',
-          ad_user_data:       'denied',
-          ad_personalization: 'denied',
-        });
-        // BUG FIX ③: revoke LinkedIn tracking on consent withdrawal
-        window._linkedin_partner_id = null;
-      }
+      CookieConsent.acceptedCategory('marketing') ? grantMarketing() : revokeMarketing();
     }
   },
 
